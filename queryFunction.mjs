@@ -1,18 +1,17 @@
 import {createConnectionPool} from './db.mjs'
-const pool = createConnectionPool();
+const POOL = createConnectionPool();
+POOL.on('error', (err, client) => console.log(err));
 
-function dbQuery(pool) {
-    return queries => {
-        return Promise.allSettled(queries.map(v => pool.query(v)))
-    }
-}
 
 function dbInsertValues(tableName) {
     return insertValuesMap => {
         // TODO reimplement separateKeyValueFromMap
         const [collumns, values] = separateKeyValueFromMap(insertValuesMap);
-        const query = `INSERT INTO "${tableName}" (${collumns}) VALUES  (${values})`;
-        return query;
+        const query = `INSERT INTO "${tableName}" (${collumns}) VALUES  (${values});`;
+
+        return dbMakeQuery(query)
+            .then(v => v.rowCount);
+
     }
 }
 
@@ -25,15 +24,19 @@ function dbDeleteRows(tableName) {
 
 function dbSelectRows(tableName) {
     return collumns => conditions => {
-        const query = `SELECT ${collumns.join(',')} FROM "${tableName}" WHERE ${conditions};`;
-        return query;
+        let query = `SELECT ${collumns.join(',')} FROM "${tableName}" WHERE ${conditions};`;
+
+
+        return dbMakeQuery(query)
+            .then(v => v.rows);
     }
 }
 
 function dbCheckExistence(tableName) {
     return conditions => {
-        const query = `SELECT EXISTS(SELECT 1 FROM "${tableName}" WHERE ${conditions})`;
-        return query;
+        const query = `SELECT EXISTS(SELECT 1 FROM "${tableName}" WHERE ${conditions});`;
+        return dbMakeQuery(query)
+            .then(v => v.rows[0].exists);
     }
 }
 
@@ -47,21 +50,48 @@ function separateKeyValueFromMap(collumnsValueMap) {
     return [keys.map(v => '"' + v + '"').join(','), values.join(',')];
 }
 
-const collumnsValueMap = new Map([['id', 8], ['name', 'user8']]);
+function dbMakeQuery(query) {
+
+    return dbQuery(POOL)(query)
+        .then(v => v)
+
+    function dbQuery(pool) {
+        return query => {
+
+            return pool.query(query);
+        }
+    }
+
+};
+
+function logger(v) {
+    console.log(v);
+    return v;
+}
+
+/*
+
+
+const collumnsValueMap = new Map([['email', 'example3@gmail.com'], ['password', '43324a234eeef']]);
+
+dbCheckExistence("table_name")(`"id" = 8`)
+    .then(v => console.log(v));
+dbInsertValues('User')(collumnsValueMap)
+dbSelectRows("User")(['password'])(`email =  'example3@gmail.com'`)
+dbSelectRows("User")(['*'])(`true`)
+    .catch(v => {console.error('error summary:', v.detail, '\n', 'error explaination :', v);})
+
+dbMakeQuery([dbCheckExistence("table_name")(`"id" = 8`), `SELECT "password" FROM "User" WHERE "email" = 'example1@gmail.com';`])
+    .then(v => console.log(v[1][0]['password']))
+  dbInsertValues('User')(collumnsValueMap),
 console.log(collumnsValueMap);
 console.log('separateKeyValueFromMap', separateKeyValueFromMap(collumnsValueMap));
 console.log('dbInsertValues', dbInsertValues('table_name')(collumnsValueMap));
+console.log('dbCheckExistence', dbCheckExistence("table_name")(`"id" = 8`));
 
-function dbMakeQueries(queries) {
-    return dbQuery(pool)(queries)
-        .then(v => v.map(v => v.value.rows))
-        .catch(v => console.error('error', v))
-};
+*/
+export {dbMakeQuery, dbInsertValues, dbDeleteRows, dbCheckExistence, dbSelectRows, separateKeyValueFromMap};
 
-//dbMakeQueries([dbSelectRows(`table_name`)([`*`])(`"id" = 7`), `SELECT * FROM "table_name";`])
-//    .then(v => console.log(v));
-
-export {dbMakeQueries, dbInsertValues, dbDeleteRows, dbCheckExistence, dbSelectRows, separateKeyValueFromMap};
 
 
 

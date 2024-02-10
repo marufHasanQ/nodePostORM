@@ -1,5 +1,4 @@
 import pg from 'pg';
-import dotenv from "dotenv";
 const {Pool} = pg;
 
 /*
@@ -12,7 +11,7 @@ const {Pool} = pg;
 })
 */
 
-const connectionString = process.env.CONNECTION_STRING? process.env.CONNECTION_STRING :'postgresql://postgres:password@localhost:5432/test_db';
+const connectionString = process.env.CONNECTION_STRING ? process.env.CONNECTION_STRING : 'postgresql://postgres:password@localhost:5432/test_db';
 
 //postgresql://username:password@hostname:port/databasename
 //'postgresql://postgres:ZqhDa2ZHuBX0SdYuUP1R@containers-us-west-39.railway.app:7706/railway';
@@ -21,7 +20,7 @@ console.log(process.env.CONNECTION_STRING);
 function createConnectionPool() {
 
     return new Pool({
-connectionString
+        connectionString
     })
 }
 export {createConnectionPool};
